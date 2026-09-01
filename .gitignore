@@ -1,0 +1,24 @@
+/target
+
+# Local environment files with secrets
+.env
+.env.local
+.env.*.local
+
+# Kubernetes secrets with real values
+deployment/kubernetes/secret.yaml
+deployment/docker/.env
+
+# IDE / OS
+.DS_Store
+.idea
+.vscode
+
+# Logs and temporary files
+*.log
+/tmp
+node_modules/
+
+# Build artifacts (rebuilt inside container)
+frontend/dist/
+*.tsbuildinfo
