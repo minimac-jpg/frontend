@@ -4,6 +4,7 @@ resources:
   - deployment.yml
   - service.yml
   - ingress.yml
+  - cluster-issuer.yml
 images:
   - name: ghcr.io/minimac-jpg/frontend
     newTag: IMAGE_TAG
