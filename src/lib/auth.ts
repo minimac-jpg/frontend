@@ -14,6 +14,26 @@ const adminUserIds = (process.env.HARLIE_ADMIN_USER_IDS ?? "zg9K3rXxVxTnPAzrzd0x
     .map((id) => id.trim())
     .filter(Boolean);
 
+// Closed-beta signup policy (shared enforcement): only allowlisted emails may
+// create accounts. HARLIE_SIGNUP_ALLOWLIST: comma-separated emails;
+// empty/unset rejects everyone. Enforced server-side (the UI cannot bypass
+// it) at both entry points:
+//   - hooks.before("/sign-up/email") for email signup
+//   - databaseHooks.user.create.before for social providers (user rows are
+//     created during the OAuth callback, which never hits /sign-up/email)
+function assertSignupAllowed(email: string | null | undefined) {
+    const allowlist = (process.env.HARLIE_SIGNUP_ALLOWLIST ?? "")
+        .split(",")
+        .map((e) => e.trim().toLowerCase())
+        .filter(Boolean);
+    const normalized = String(email ?? "").trim().toLowerCase();
+    if (!allowlist.includes(normalized)) {
+        throw new APIError("FORBIDDEN", {
+            message: "Signups are currently closed",
+        });
+    }
+}
+
 export const auth = betterAuth({
     baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:5173",
     trustedOrigins: [
@@ -22,6 +42,38 @@ export const auth = betterAuth({
         "http://localhost:8080",
     ].filter((o): o is string => !!o),
     basePath: "/api/session",
+    // Social providers are only registered when their credentials are present,
+    // so the app boots email-only before the OAuth apps are configured.
+    // Callback URL to register with each provider:
+    //   {BETTER_AUTH_URL}/api/session/callback/<provider>
+    socialProviders: {
+        ...(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET
+            ? {
+                  github: {
+                      clientId: process.env.GITHUB_CLIENT_ID,
+                      clientSecret: process.env.GITHUB_CLIENT_SECRET,
+                  },
+              }
+            : {}),
+        ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+            ? {
+                  google: {
+                      clientId: process.env.GOOGLE_CLIENT_ID,
+                      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+                  },
+              }
+            : {}),
+        ...(process.env.MICROSOFT_CLIENT_ID && process.env.MICROSOFT_CLIENT_SECRET
+            ? {
+                  microsoft: {
+                      clientId: process.env.MICROSOFT_CLIENT_ID,
+                      clientSecret: process.env.MICROSOFT_CLIENT_SECRET,
+                      // Defaults to "common": personal + work/school accounts
+                      tenantId: process.env.MICROSOFT_TENANT_ID ?? "common",
+                  },
+              }
+            : {}),
+    },
     advanced: {
         cookiePrefix: "harlie",
         // In-cluster traffic arrives via Traefik (pod CIDR 10.42.0.0/16) with
@@ -54,6 +106,19 @@ export const auth = betterAuth({
         // bypassing model hooks) — see the endpoint hooks below.
         user: {
             create: {
+                before: async (user) => {
+                    // Social providers create the user row during the OAuth
+                    // callback (never reaching /sign-up/email), so the
+                    // closed-beta policy must be enforced here for every
+                    // new-user creation. HARLIE_DISABLE_SIGNUP is the
+                    // hard-off knob and blocks social signups too.
+                    if (process.env.HARLIE_DISABLE_SIGNUP === "true") {
+                        throw new APIError("FORBIDDEN", {
+                            message: "Signups are currently closed",
+                        });
+                    }
+                    assertSignupAllowed(user.email);
+                },
                 after: async (user) => {
                     await provisionTenancy({
                         kind: "personal",
@@ -66,25 +131,12 @@ export const auth = betterAuth({
     },
     hooks: {
         before: async (rawCtx: unknown) => {
-            // Closed-beta signup policy: only allowlisted emails may create
-            // accounts. Enforced server-side (the UI cannot bypass it).
-            // HARLIE_SIGNUP_ALLOWLIST: comma-separated emails; empty/unset
-            // rejects everyone. Returning nothing passes the request through.
             const ctx = rawCtx as {
                 path?: string;
                 body?: { email?: string };
             };
             if (ctx.path !== "/sign-up/email") return;
-            const allowlist = (process.env.HARLIE_SIGNUP_ALLOWLIST ?? "")
-                .split(",")
-                .map((e) => e.trim().toLowerCase())
-                .filter(Boolean);
-            const email = String(ctx.body?.email ?? "").trim().toLowerCase();
-            if (!allowlist.includes(email)) {
-                throw new APIError("FORBIDDEN", {
-                    message: "Signups are currently closed",
-                });
-            }
+            assertSignupAllowed(ctx.body?.email);
         },
         after: async (rawCtx: unknown): Promise<{ headers: Headers }> => {
             // Org creation → provision the platform tenant record. The

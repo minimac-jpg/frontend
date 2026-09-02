@@ -1,10 +1,19 @@
+import { useNavigate } from "@tanstack/react-router";
 import { KeyRound, Loader2 } from "lucide-react";
 import { type FormEvent, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
-import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { authClient } from "@/lib/auth-client";
 import { useAuth } from "../../hooks/use-auth";
+import { GithubIcon, GoogleIcon, MicrosoftIcon } from "./social-icons";
+
+const SOCIAL_PROVIDERS = [
+  { provider: "google", label: "Google", Icon: GoogleIcon },
+  { provider: "github", label: "GitHub", Icon: GithubIcon },
+  { provider: "microsoft", label: "Microsoft", Icon: MicrosoftIcon },
+] as const;
+
+type SocialProvider = (typeof SOCIAL_PROVIDERS)[number]["provider"];
 
 export function LoginForm({ redirectTo }: { redirectTo?: string }) {
   const { login, isLoggingIn, loginError } = useAuth();
@@ -16,6 +25,31 @@ export function LoginForm({ redirectTo }: { redirectTo?: string }) {
   const [validationError, setValidationError] = useState<string | null>(null);
   const [signupError, setSignupError] = useState<string | null>(null);
   const [isSigningUp, setIsSigningUp] = useState(false);
+  const [socialError, setSocialError] = useState<string | null>(null);
+  const [socialLoading, setSocialLoading] = useState<SocialProvider | null>(null);
+
+  const safeRedirect =
+    redirectTo?.startsWith("/") && !redirectTo.startsWith("//") ? redirectTo : "/";
+
+  const handleSocial = async (provider: SocialProvider) => {
+    setSocialError(null);
+    setValidationError(null);
+    setSignupError(null);
+    setSocialLoading(provider);
+    try {
+      const { error } = await authClient.signIn.social({
+        provider,
+        callbackURL: safeRedirect,
+      });
+      if (error) {
+        setSocialError(error.message ?? "Sign in failed");
+      }
+    } catch {
+      setSocialError("Sign in failed");
+    } finally {
+      setSocialLoading(null);
+    }
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -46,9 +80,7 @@ export function LoginForm({ redirectTo }: { redirectTo?: string }) {
           return;
         }
         await login({ email: email.trim(), password });
-        if (redirectTo?.startsWith("/") && !redirectTo.startsWith("//")) {
-          navigate({ to: redirectTo, replace: true });
-        }
+        navigate({ to: safeRedirect, replace: true });
       } catch {
         setSignupError("Signup failed");
       } finally {
@@ -59,9 +91,7 @@ export function LoginForm({ redirectTo }: { redirectTo?: string }) {
 
     try {
       await login({ email: email.trim(), password });
-      if (redirectTo?.startsWith("/") && !redirectTo.startsWith("//")) {
-        navigate({ to: redirectTo, replace: true });
-      }
+      navigate({ to: safeRedirect, replace: true });
     } catch {
       // error is captured in loginError
     }
@@ -84,6 +114,38 @@ export function LoginForm({ redirectTo }: { redirectTo?: string }) {
           </p>
         </div>
         <div className="p-6">
+          {socialError && (
+            <div
+              className="mb-4 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive"
+              role="alert"
+            >
+              {socialError}
+            </div>
+          )}
+          <div className="flex flex-col gap-3">
+            {SOCIAL_PROVIDERS.map(({ provider, label, Icon }) => (
+              <Button
+                key={provider}
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => handleSocial(provider)}
+                disabled={isBusy || socialLoading !== null}
+              >
+                {socialLoading === provider ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Icon className="size-4" />
+                )}
+                {label}
+              </Button>
+            ))}
+          </div>
+          <div className="my-6 flex items-center gap-3">
+            <span className="h-px flex-1 bg-border" />
+            <span className="text-xs text-muted-foreground">Or continue with Email</span>
+            <span className="h-px flex-1 bg-border" />
+          </div>
           {isBusy ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="size-6 animate-spin text-muted-foreground" />
