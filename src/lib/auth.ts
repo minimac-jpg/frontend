@@ -24,6 +24,12 @@ export const auth = betterAuth({
     basePath: "/api/session",
     advanced: {
         cookiePrefix: "harlie",
+        // In-cluster traffic arrives via Traefik (pod CIDR 10.42.0.0/16) with
+        // node-level SNAT (GCP node CIDR 10.138.0.0/20). Trust those proxies
+        // so client IPs resolve from X-Forwarded-For (rightmost-untrusted).
+        ipAddress: {
+            trustedProxies: ["10.42.0.0/16", "10.138.0.0/20"],
+        },
         database: {
             // Platform ids must be UUIDs: every service's tenant/owner columns
             // are UUID-typed and JWT subjects flow into them directly.

@@ -13,6 +13,7 @@ FROM oven/bun:1-slim AS runtime
 WORKDIR /app
 RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY --from=build /app/dist ./dist
+COPY --from=build /app/server.ts ./
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/package.json ./
 # Drizzle schema + config so a one-shot migration Job can run
@@ -24,5 +25,5 @@ COPY --from=build /app/tsconfig.json ./
 ENV NODE_ENV=production
 EXPOSE 3000
 
-# TanStack Start SSR server (Nitro)
-CMD ["bun", "./dist/server/index.js"]
+# Static assets from dist/client + SSR via dist/server/index.js (see server.ts)
+CMD ["bun", "server.ts"]
