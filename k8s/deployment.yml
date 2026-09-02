@@ -35,6 +35,8 @@ spec:
                 secretKeyRef:
                   name: harlie-secrets
                   key: better_auth_secret
+            - name: HARLIE_SIGNUP_ALLOWLIST
+              value: "markcadlejr@gmail.com"
           livenessProbe:
             httpGet:
               path: /api/session/ok
