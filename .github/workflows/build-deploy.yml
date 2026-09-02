@@ -47,11 +47,12 @@ jobs:
           mkdir -p ~/.kube
           echo "${{ secrets.K3S_KUBECONFIG }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
+          test -s ~/.kube/config || { echo "::error::K3S_KUBECONFIG secret is empty or missing"; exit 1; }
       - name: Deploy to k3s
         run: |
+          export KUBECONFIG="$HOME/.kube/config"
+          kubectl cluster-info
           cd k8s
           kubectl kustomize . | \
             sed "s|IMAGE_TAG|${{ github.sha }}|g" | \
             kubectl apply -f -
-        env:
-          KUBECONFIG: ~/.kube/config
