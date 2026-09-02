@@ -2,26 +2,46 @@
 
 React/TypeScript frontend for the Maple CI/CD platform.
 
+Built with Bun and rsbuild, served by TanStack Start (SSR).
+
 ## Development
 
+Requires [Bun](https://bun.sh) (Node 24 for tooling — see `.nvmrc`).
+
 ```bash
-npm install
-AUTH_MODE=dev cargo run --bin controller # run in main directory or run !1024
-npm run dev # run in /apps/web-ui
+bun install
+bun run dev
 ```
+
+## Scripts
+
+| Command | Description |
+|---|---|
+| `bun run dev` | Dev server |
+| `bun run build` | Type-check + production build |
+| `bun run preview` | Preview production build |
+| `bun run test` | Run tests (Vitest) |
+| `bun run lint` | Lint (Biome) |
+| `bun run format` | Format (Biome) |
+| `bun run typecheck` | TypeScript check |
 
 ## Build
 
 ```bash
-npm run build
-npm run preview
+bun run build
+bun run preview
 ```
+
+## Deployment
+
+Docker image is built and pushed to `ghcr.io/minimac-jpg/frontend` by
+`.github/workflows/build-deploy.yml`, then deployed to k3s via `k8s/`.
 
 ## Tech Stack
 
-- React 19
-- TypeScript 5.8
-- Vite 6
-- TanStack Router
-- TanStack Query
-- Tailwind / Shadcn/ui
+- Bun + rsbuild 2
+- React 19 / TypeScript 5.8
+- TanStack Start (SSR), Router, Query, Table
+- Tailwind CSS 4 / Shadcn/ui
+- Drizzle ORM (migrations via `drizzle-kit push`)
+- Biome (lint/format), Vitest (testing)

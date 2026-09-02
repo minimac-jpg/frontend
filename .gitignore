@@ -1,5 +1,3 @@
-/target
-
 # Local environment files with secrets
 .env
 .env.local
@@ -20,5 +18,8 @@ deployment/docker/.env
 node_modules/
 
 # Build artifacts (rebuilt inside container)
-frontend/dist/
+dist/
+
+# Framework generated files
+.tanstack/
 *.tsbuildinfo
