@@ -3,6 +3,7 @@ kind: Kustomization
 resources:
   - deployment.yml
   - service.yml
+  - ingress.yml
 images:
   - name: ghcr.io/minimac-jpg/frontend
     newTag: IMAGE_TAG
