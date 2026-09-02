@@ -5,6 +5,7 @@ import type { User } from "../types/auth";
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
+  isPending: boolean;
   token: string | null;
 }
 
@@ -36,6 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         isAuthenticated: !!user,
+        isPending: session.isPending,
         token: null,
         setAuth: () => {},
         clearAuth: () => {},

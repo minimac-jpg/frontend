@@ -29,7 +29,12 @@ spec:
                   name: harlie-secrets
                   key: database_url_frontend
             - name: BETTER_AUTH_URL
-              value: "http://frontend.harlie.svc.cluster.local:3000"
+              value: "https://harlie.dev"
+            - name: BETTER_AUTH_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: harlie-secrets
+                  key: better_auth_secret
           livenessProbe:
             httpGet:
               path: /api/session/ok

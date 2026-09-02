@@ -1,4 +1,5 @@
 import { useMatches, useNavigate, useRouterState } from "@tanstack/react-router";
+import { Loader2 } from "lucide-react";
 import { type ReactNode, useEffect } from "react";
 import { useAuthStore } from "../../state/auth-store";
 
@@ -9,7 +10,7 @@ interface RequireAuthProps {
 const PUBLIC_PATHS = ["/login"];
 
 export function RequireAuth({ children }: RequireAuthProps) {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, isPending } = useAuthStore();
   const navigate = useNavigate();
   const matches = useMatches();
   const redirectSearch = useRouterState({
@@ -25,13 +26,22 @@ export function RequireAuth({ children }: RequireAuthProps) {
       : "/";
 
   useEffect(() => {
+    if (isPending) return;
     if (!isAuthenticated && !isPublicPath) {
       navigate({ to: "/login", replace: true });
     }
     if (isAuthenticated && isPublicPath) {
       navigate({ to: redirectTo, replace: true });
     }
-  }, [isAuthenticated, isPublicPath, redirectTo, navigate]);
+  }, [isPending, isAuthenticated, isPublicPath, redirectTo, navigate]);
+
+  if (isPending && !isPublicPath) {
+    return (
+      <div className="flex min-h-svh items-center justify-center">
+        <Loader2 className="size-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   if (!isAuthenticated && !isPublicPath) {
     return null;
