@@ -4,5 +4,5 @@ resources:
   - deployment.yml
   - service.yml
 images:
-  - name: ghcr.io/OWNER/frontend
+  - name: ghcr.io/minimac-jpg/frontend
     newTag: IMAGE_TAG
